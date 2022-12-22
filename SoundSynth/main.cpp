@@ -9,8 +9,16 @@ double MakeNoise(double dTime) // dTime = time passed since start of program
 	// amplitude (0.5) * sin(frequency in hrtz * dTime)
 	// 440 hrtz should be the note A
 	// sin takes angular velocity, not hrtz, so conversion (value * 2 * pi)
-	// "at given point in time (dTime), what should our sin wave look like"
-	return 0.5 * sin(440.0 * (2 * 3.14159) * dTime);
+	// dOutput captures sin wave shape at given point in time (dTime)
+	double dOutput = 1.0 * sin(220.0 * (2 * 3.14159) * dTime);
+
+	// takes dOutput sin wave and makes it into square wave
+	// we set amplitude implicitly as can only have a + or - in a square wave
+	if (dOutput > 0.0)
+		return 0.2;
+	else
+		return -0.2;
+
 }
 
 
@@ -35,7 +43,7 @@ int main()
 
 	while (1)
 	{
-
+		// Add a keyboard
 	}
 
 
