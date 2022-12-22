@@ -42,21 +42,37 @@ int main()
 	// will return a value between 0 and 1 to represent where the speaker cone should be (relative to time)
 	sound.SetUserFunction(MakeNoise);
 
+	// every doubling frequency moves up 1 octave; 12 notes in an octave
+	// can't simply divide frequency by 12 as it doubles each time
+	// instead using power of 2 to the 12th root
+	double dOctaveBaseFrequency = 110.0; // A2
+	double d12thRootOf2 = pow(2.0, 1.0 / 12.0);
+
 
 	while (1)
 	{
-		// Add a keyboard
+		// Add a keyboard like a piano
 
-		// testing if highest bit of A key is present; if yes, it's pressed
-		if (GetAsyncKeyState('A') & 0x8000)
+		bool bKeyPressed = false;
+		for (int k = 0; k < 15; k++)
 		{
-			// 440 hrtz should be the note A
-			dFrequencyOutput = 440.0;
+			// testing if highest bit of a list key is present; if yes, it's pressed
+			// note mapping: Z is a; S is aSharp; X is b; C is c; F is cSharp
+			// V is d; G is dSharp; B is e; N is f; J is fSharp; M is g; K is gSharp
+			// unsure what notes , (xbc) or L or . (xbe) are
+			if (GetAsyncKeyState((unsigned char)("ZSXCFVGBNJMK\xbcL\xbe"[k])) & 0x8000)
+			{
+				// 440 hrtz should be the note A
+				dFrequencyOutput = dOctaveBaseFrequency * pow(d12thRootOf2, k);
+				bKeyPressed = true;
+			}
 		}
-		else
+
+		if (!bKeyPressed)
 		{
 			dFrequencyOutput = 0.0;
 		}
+
 	}
 
 
