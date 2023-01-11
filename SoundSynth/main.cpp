@@ -56,6 +56,95 @@ double osc(double dHertz, double dTime, int nType)
 	}
 }
 
+// ADSR = Attack time, Decay time, Sustain amplitude, Release time
+struct sEnvelopeADSR
+{
+	double dAttackTime;
+	double dDecayTime;
+	double dReleaseTime;
+
+	double dSustainAmplitude;
+	double dStartAmplitude;
+
+	double dTriggerOnTime;
+	double dTriggerOffTime;
+
+	bool bNoteOn;
+
+	sEnvelopeADSR()
+	{
+		dAttackTime = 0.01; // 10 milliseconds
+		dDecayTime = 0.01;
+		dStartAmplitude = 1.0;
+		dSustainAmplitude = 0.8;
+		dReleaseTime = 0.02;
+		dTriggerOnTime = 0.0;
+		dTriggerOffTime = 0.0;
+		bNoteOn = false;
+	}
+
+	// envelope can be indexed at any point in time by our MakeNoise function
+	// need to return the amplitude of this envelope for a given time
+	double GetAmplitude(double dTime) // dTime = real ("wall") time of music 
+	{
+		double dAmplitude = 0.0;
+		double dLifeTime = dTime - dTriggerOnTime; // turns dTime into an index into the lifeTime of this envelope
+
+		// 2 phases, key down and key released
+		if (bNoteOn)
+		{
+			// ADS - Attack, Decay, Sustain (key down)
+
+			// Attack
+			if (dLifeTime <= dAttackTime) //in attack phase
+				dAmplitude = (dLifeTime / dAttackTime) * dStartAmplitude; //normalizes attack time; creating a value between 0 and 1
+				//if lifeTime < attackTime (ex 0/5), after 4 secs, will be 4/5, eventually will be 5/5 or 1 (thus going from 0 amplitude to 100%)
+
+			// Decay 
+			if (dLifeTime > dAttackTime && dLifeTime <= (dAttackTime + dDecayTime)) // start to end of decay phase
+				dAmplitude = ((dLifeTime - dAttackTime) / dDecayTime) * (dSustainAmplitude - dStartAmplitude) + dStartAmplitude; 
+				//index 0-1 of how long into decay time, with gradiant defined by susntainAmp - startAmp (sustainAmp usually lower than startAmp)
+
+			// Sustain
+			if (dLifeTime > (dAttackTime + dDecayTime)) //anytime after attack and decay phases, and key is down, we are in our sustain phase
+			{
+				dAmplitude = dSustainAmplitude; //just output a solidary volume
+			}
+
+		}		
+		else
+		{
+			// R - Release (key released)
+			dAmplitude = ((dTime - dTriggerOffTime) / dReleaseTime) * (0.0 - dSustainAmplitude) + dSustainAmplitude; // 0-1 value for release phase
+		}
+
+		// epsilon value check; stops signals coming out of envelope that are so low we're not concerned with them, can't hear them
+		// can also cause problems not having these values set to 0, if they're below a certain value
+		if (dAmplitude <= 0.0001)
+		{
+			dAmplitude = 0;
+		}
+
+
+		return dAmplitude;
+	}
+
+	// to make easier to use, NoteOn and NoteOff methods to capture time of each
+	void NoteOn(double dTimeOn)
+	{
+		dTriggerOnTime = dTimeOn;
+		bNoteOn = true;
+	}
+
+	void NoteOff(double dTimeOff)
+	{
+		dTriggerOffTime = dTimeOff;
+		bNoteOn = false;
+	}
+
+};
+
+
 // Global synthesizer variables
 atomic<double> dFrequencyOutput = 0.0;			// dominant output frequency of instrument, i.e. the note
 double dOctaveBaseFrequency = 110.0; // A2		// frequency of octave represented by keyboard
@@ -85,8 +174,8 @@ int main()
 
 	// Display a keyboard
 	wcout << endl <<
-		"|   |   |   |   |   | |   |   |   |   | |   | |   |   |   |" << endl <<
-		"|   | S |   |   | F | | G |   |   | J | | K | | L |   |   |" << endl <<
+		"|   |   |   |   |   | |   |   |   |   | |   | |   |   |   |  " << endl <<
+		"|   | S |   |   | F | | G |   |   | J | | K | | L |   |   |  " << endl <<
 		"|   |___|   |   |___| |___|   |   |___| |___| |___|   |   |__" << endl <<
 		"|     |     |     |     |     |     |     |     |     |     |" << endl <<
 		"|  Z  |  X  |  C  |  V  |  B  |  N  |  M  |  ,  |  .  |  /  |" << endl <<
