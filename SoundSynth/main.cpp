@@ -73,11 +73,11 @@ struct sEnvelopeADSR
 
 	sEnvelopeADSR()
 	{
-		dAttackTime = 0.01; // 10 milliseconds
+		dAttackTime = 0.100; // 100 milliseconds
 		dDecayTime = 0.01;
 		dStartAmplitude = 1.0;
 		dSustainAmplitude = 0.8;
-		dReleaseTime = 0.02;
+		dReleaseTime = 0.200;
 		dTriggerOnTime = 0.0;
 		dTriggerOffTime = 0.0;
 		bNoteOn = false;
@@ -149,13 +149,17 @@ struct sEnvelopeADSR
 atomic<double> dFrequencyOutput = 0.0;			// dominant output frequency of instrument, i.e. the note
 double dOctaveBaseFrequency = 110.0; // A2		// frequency of octave represented by keyboard
 double d12thRootOf2 = pow(2.0, 1.0 / 12.0);		// assuming western 12 notes per ocatve
+sEnvelopeADSR envelope;
 
 // Function used by olcNoiseMaker to generate sound waves
 // Returns amplitude (-1.0 to +1.0) as a function of time
 double MakeNoise(double dTime)
 {
-	double dOutput = osc(dFrequencyOutput, dTime, 3);
-
+	double dOutput = envelope.GetAmplitude(dTime) * //now modulating the addition of 2 different frequencies (more textured instrumental sound)
+	(
+		+ osc(dFrequencyOutput * 0.5, dTime, 3) //envelope gives amplitude at a point in time; sawtooth generator 50% frequency
+		+ osc(dFrequencyOutput * 1.0, dTime, 1) //standard sine wave generator 100% frequency 
+	);
 	return dOutput * 0.4; // Master Volume
 
 }
@@ -201,6 +205,7 @@ int main()
 				if (nCurrentKey != k)
 				{
 					dFrequencyOutput = dOctaveBaseFrequency * pow(d12thRootOf2, k);
+					envelope.NoteOn(sound.GetTime()); //links envelope with when note is pressed, using current time of system
 					wcout << "\nNote On: " << sound.GetTime() << "s" << dFrequencyOutput << "Hz";
 					nCurrentKey = k;
 				}
@@ -215,11 +220,10 @@ int main()
 				if (nCurrentKey != -1)
 				{
 					wcout << "\rNote Off: " << sound.GetTime() << "s                        ";
+					envelope.NoteOff(sound.GetTime()); //links envelope with when note is released, using current time of system
 					nCurrentKey = -1;
 				}
 			}
-			
-			dFrequencyOutput = 0.0;
 		}
 
 	}
